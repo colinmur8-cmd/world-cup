@@ -22,26 +22,70 @@ from model.dixon_coles import DixonColesModel
 from model.markets import all_markets, match_result, over_under, btts
 from model.edge import find_value, simulate_bookmaker_odds
 from data.loader import load_matches
+from model.simulate_tournament import simulate_tournament
 from tabulate import tabulate
 
 
-# ── 2026 group-stage fixtures (first match date per group shown) ─────────────
-# Update with confirmed fixture list once released.
+# ── 2026 group-stage fixtures ────────────────────────────────────────────────
+# Confirmed draw: Kennedy Center, Washington D.C., December 5, 2025.
 
 WC2026_GROUPS: dict[str, list[str]] = {
-    "A": ["USA",        "Bolivia",     "Panama",      "Morocco"],
-    "B": ["Argentina",  "Chile",       "Peru",        "Albania"],
-    "C": ["Mexico",     "Jamaica",     "Honduras",    "Ukraine"],
-    "D": ["France",     "Belgium",     "Saudi Arabia","Paraguay"],
-    "E": ["Spain",      "Brazil",      "Japan",       "Serbia"],   # provisional
-    "F": ["England",    "Netherlands", "Senegal",     "Ecuador"],
-    "G": ["Portugal",   "Croatia",     "Cameroon",    "New Zealand"],
-    "H": ["Germany",    "Australia",   "Colombia",    "Uruguay"],
-    "I": ["Italy",      "South Korea", "Kenya",       "Iran"],
-    "J": ["Canada",     "Venezuela",   "Costa Rica",  "Nigeria"],
-    "K": ["Poland",     "Czechia",     "Switzerland", "Tunisia"],
-    "L": ["Denmark",    "Ivory Coast", "Egypt",       "Qatar"],
+    "A": ["Mexico",      "South Africa", "South Korea",  "Czechia"],
+    "B": ["Canada",      "Bosnia",       "Qatar",        "Switzerland"],
+    "C": ["Brazil",      "Morocco",      "Scotland",     "Haiti"],
+    "D": ["USA",         "Paraguay",     "Australia",    "Turkey"],
+    "E": ["Germany",     "Curacao",      "Ivory Coast",  "Ecuador"],
+    "F": ["Netherlands", "Japan",        "Sweden",       "Tunisia"],
+    "G": ["Belgium",     "Egypt",        "Iran",         "New Zealand"],
+    "H": ["Spain",       "Cape Verde",   "Saudi Arabia", "Uruguay"],
+    "I": ["France",      "Senegal",      "Norway",       "Iraq"],
+    "J": ["Argentina",   "Algeria",      "Austria",      "Jordan"],
+    "K": ["Portugal",    "Colombia",     "Uzbekistan",   "DR Congo"],
+    "L": ["England",     "Croatia",      "Ghana",        "Panama"],
 }
+
+# ── Round-of-32 bracket structure ────────────────────────────────────────────
+# Notation: "1X" = winner of Group X, "2X" = runner-up of Group X
+# "3[ABCDE...]" = best third-place finisher from one of those listed groups
+# (exact 3rd-place slot is resolved post-group-stage per FIFA's 495 scenarios)
+#
+# Match  49:  1E  vs  3[A/B/C/D/F]
+# Match  50:  1I  vs  3[C/D/F/G/H]
+# Match  51:  2A  vs  2B
+# Match  52:  1F  vs  2C
+# Match  53:  2K  vs  2L
+# Match  54:  1H  vs  2J
+# Match  55:  1D  vs  3[B/E/F/I/J]
+# Match  56:  1G  vs  3[A/E/H/I/J]
+# Match  57:  1C  vs  2F
+# Match  58:  2E  vs  2I
+# Match  59:  1A  vs  3[C/E/F/H/I]
+# Match  60:  1L  vs  3[E/H/I/J/K]
+# Match  61:  1J  vs  2H
+# Match  62:  2D  vs  2G
+# Match  63:  1B  vs  3[E/F/G/I/J]
+# Match  64:  1K  vs  3[D/E/I/J/L]
+#
+# Source: FIFA Competition Regulations 2026 / official knockout schedule
+
+R32_BRACKET: list[tuple[str, str]] = [
+    ("1E",  "3ABCDF"),
+    ("1I",  "3CDFGH"),
+    ("2A",  "2B"),
+    ("1F",  "2C"),
+    ("2K",  "2L"),
+    ("1H",  "2J"),
+    ("1D",  "3BEFIJ"),
+    ("1G",  "3AEHIJ"),
+    ("1C",  "2F"),
+    ("2E",  "2I"),
+    ("1A",  "3CEFHI"),
+    ("1L",  "3EHIJK"),
+    ("1J",  "2H"),
+    ("2D",  "2G"),
+    ("1B",  "3EFGIJ"),
+    ("1K",  "3DEIJL"),
+]
 
 # ── Full group-stage fixture list ────────────────────────────────────────────
 def generate_group_fixtures(groups: dict[str, list[str]]) -> list[tuple[str, str, str]]:
@@ -163,6 +207,46 @@ def scan_group_stage(model: DixonColesModel | None = None,
         })
 
     return pd.DataFrame(rows)
+
+
+# ── Tournament winner prediction ──────────────────────────────────────────────
+
+def predict_tournament_winner(
+    model: DixonColesModel | None = None,
+    n_sims: int = 50_000,
+    top_n: int = 16,
+) -> dict[str, float]:
+    """
+    Simulate the 2026 WC tournament and print win probabilities.
+    Returns the full dict of win probabilities.
+    """
+    if model is None:
+        model = load_trained_model()
+
+    probs = simulate_tournament(
+        WC2026_GROUPS,
+        model,
+        n_sims=n_sims,
+        seed=42,
+        format32=False,
+        r32_bracket=R32_BRACKET,
+    )
+
+    rows = []
+    for rank, (team, prob) in enumerate(list(probs.items())[:top_n], 1):
+        rows.append((rank, team, f"{prob*100:.1f}%", f"{1/max(prob,1e-9):.1f}x"))
+
+    sep = "═" * 60
+    print(f"\n{sep}")
+    print(f"  WC 2026 WINNER PREDICTION  ({n_sims:,} simulations)")
+    print(f"  Model: Dixon-Coles trained on WC 2018+2022 | Groups: confirmed draw Dec 2025")
+    print(f"{sep}")
+    from tabulate import tabulate as _tab
+    print(_tab(rows, headers=["Rank", "Team", "Win Prob", "Fair Odds"],
+               tablefmt="rounded_outline",
+               colalign=("right","left","right","right")))
+    print()
+    return probs
 
 
 # ── CLI helper ────────────────────────────────────────────────────────────────

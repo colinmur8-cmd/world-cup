@@ -38,8 +38,10 @@ from model.edge import find_value
 from backtest.engine import run_backtest
 from backtest.report import print_report, save_equity_curve
 from predictions.wc2026 import (
-    load_trained_model, predict_match, print_group_predictions
+    load_trained_model, predict_match, print_group_predictions,
+    predict_tournament_winner,
 )
+from backtest.winner import run_winner_backtest, print_backtest_summary
 
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
@@ -53,6 +55,10 @@ def parse_args():
                    help='Single match: "Home vs Away"')
     p.add_argument("--no-chart",      action="store_true",
                    help="Skip saving the equity curve chart")
+    p.add_argument("--winners",       action="store_true",
+                   help="Backtest winner predictions (2018/2022) then predict 2026")
+    p.add_argument("--sims",          type=int, default=50_000,
+                   help="Monte Carlo simulations for winner prediction (default: 50000)")
     return p.parse_args()
 
 
@@ -152,6 +158,14 @@ def main() -> None:
         print_report(result)
         if not args.no_chart:
             save_equity_curve(result)
+
+    # ── Winner prediction backtest + 2026 forecast ──
+    if args.winners:
+        results = run_winner_backtest(n_sims=args.sims)
+        print_backtest_summary(results)
+        print("\n  Predicting 2026 winner…")
+        predict_tournament_winner(model, n_sims=args.sims)
+        return
 
     # ── 2026 predictions ──
     if not args.backtest_only:

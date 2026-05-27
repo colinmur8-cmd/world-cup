@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 from data.wc2018 import MATCHES_2018
 from data.wc2022 import MATCHES_2022
@@ -94,6 +95,72 @@ def load_from_csv(csv_path: str,
     return _normalise(
         df[["tournament","stage","date","home_team","away_team",
             "home_goals","away_goals","total_goals"]]
+        .sort_values("date")
+        .reset_index(drop=True)
+    )
+
+
+def load_full_history(
+    cutoff_date: str | None = None,
+    window_years: int = 8,
+    competitive_only: bool = True,
+    cache_path: str | None = None,
+) -> pd.DataFrame:
+    """
+    Download (and cache) the martj42/international_results full history,
+    then return matches within *window_years* before *cutoff_date*.
+
+    cutoff_date : ISO date string, e.g. "2018-06-14". Matches on/after this
+                  date are excluded, so we only train on pre-tournament data.
+    window_years: how many years back from cutoff to include.
+    competitive_only: drop plain Friendly matches (reduces noise).
+    cache_path  : override where to store the downloaded CSV.
+    """
+    import io, urllib.request
+
+    _URL = (
+        "https://raw.githubusercontent.com/"
+        "martj42/international_results/master/results.csv"
+    )
+    _DEFAULT_CACHE = os.path.join(os.path.dirname(__file__), "_int_results_cache.csv")
+    cache = cache_path or _DEFAULT_CACHE
+
+    if os.path.exists(cache):
+        df = pd.read_csv(cache, low_memory=False)
+    else:
+        print("  Downloading international results (martj42)…", end=" ", flush=True)
+        with urllib.request.urlopen(_URL, timeout=20) as r:
+            raw = r.read().decode("utf-8")
+        df = pd.read_csv(io.StringIO(raw), low_memory=False)
+        df.to_csv(cache, index=False)
+        print(f"cached ({len(df):,} rows)")
+
+    df["date"] = pd.to_datetime(df["date"])
+
+    if cutoff_date is not None:
+        cutoff = pd.Timestamp(cutoff_date)
+        if window_years:
+            start = cutoff - pd.DateOffset(years=window_years)
+            df = df[(df["date"] >= start) & (df["date"] < cutoff)].copy()
+        else:
+            df = df[df["date"] < cutoff].copy()
+
+    if competitive_only:
+        df = df[~df["tournament"].str.lower().str.startswith("friendly", na=False)].copy()
+
+    # martj42 uses home_score / away_score
+    rename = {"home_score": "home_goals", "away_score": "away_goals"}
+    df.rename(columns=rename, inplace=True)
+
+    df["home_goals"] = pd.to_numeric(df["home_goals"], errors="coerce").fillna(0).astype(int)
+    df["away_goals"] = pd.to_numeric(df["away_goals"], errors="coerce").fillna(0).astype(int)
+    df["total_goals"] = df["home_goals"] + df["away_goals"]
+    df["stage"] = df.get("tournament", pd.Series("International", index=df.index))
+
+    cols = ["stage", "date", "home_team", "away_team", "home_goals", "away_goals", "total_goals"]
+    return _normalise(
+        df[cols]
+        .dropna(subset=["home_team", "away_team"])
         .sort_values("date")
         .reset_index(drop=True)
     )
