@@ -140,7 +140,7 @@ def run_winner_backtest(
         if verbose:
             print(f"     Training matches: {len(hist):,}")
 
-        model = DixonColesModel().fit(hist)
+        model = DixonColesModel().fit(hist, decay=0.3)
 
         probs = simulate_tournament(
             meta.groups,

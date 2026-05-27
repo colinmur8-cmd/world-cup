@@ -19,7 +19,8 @@ from scipy.special import gammaln
 def _neg_ll(params: np.ndarray,
             home_idx: np.ndarray, away_idx: np.ndarray,
             hg: np.ndarray, ag: np.ndarray,
-            n: int) -> float:
+            n: int,
+            weights: np.ndarray) -> float:
     attack  = params[:n]
     defense = params[n:2*n]
     rho     = params[2*n]
@@ -42,7 +43,7 @@ def _neg_ll(params: np.ndarray,
     tau[m10] = 1.0 + mu[m10]  * rho
     tau[m11] = 1.0 - rho
 
-    return -np.sum(np.log(np.maximum(tau, 1e-10)) + ll_h + ll_a)
+    return -np.sum(weights * (np.log(np.maximum(tau, 1e-10)) + ll_h + ll_a))
 
 
 # ── Model class ───────────────────────────────────────────────────────────────
@@ -58,7 +59,9 @@ class DixonColesModel:
 
     # ── Fitting ───────────────────────────────────────────────────────────────
 
-    def fit(self, df: pd.DataFrame) -> "DixonColesModel":
+    def fit(self, df: pd.DataFrame,
+            decay: float = 0.3,
+            reference_date=None) -> "DixonColesModel":
         teams   = sorted(set(df["home_team"]) | set(df["away_team"]))
         t2i     = {t: i for i, t in enumerate(teams)}
         n       = len(teams)
@@ -68,6 +71,12 @@ class DixonColesModel:
         hg  = df["home_goals"].to_numpy(dtype=int)
         ag  = df["away_goals"].to_numpy(dtype=int)
 
+        if reference_date is None:
+            reference_date = df["date"].max()
+        days_ago = (reference_date - df["date"]).dt.days.to_numpy(dtype=float)
+        weights = np.exp(-decay * days_ago / 365.25)
+        weights = weights / weights.mean()   # normalise so sum ≈ n_matches
+
         x0 = np.zeros(2 * n + 1)
         x0[2*n] = -0.1   # rho initial guess
 
@@ -75,7 +84,7 @@ class DixonColesModel:
 
         res = minimize(
             _neg_ll, x0,
-            args=(hi, ai, hg, ag, n),
+            args=(hi, ai, hg, ag, n, weights),
             method="L-BFGS-B",
             bounds=bounds,
             options={"maxiter": 3000, "ftol": 1e-12, "gtol": 1e-7},
@@ -85,11 +94,13 @@ class DixonColesModel:
         def_raw  = res.x[n:2*n]
         att_mean = att_raw.mean()
 
-        self.teams   = teams
-        self.attack  = {t: att_raw[i]  - att_mean for i, t in enumerate(teams)}
-        self.defense = {t: def_raw[i]  + att_mean for i, t in enumerate(teams)}
-        self.rho     = float(res.x[2*n])
-        self._fitted = True
+        self.teams         = teams
+        self.attack        = {t: att_raw[i]  - att_mean for i, t in enumerate(teams)}
+        self.defense       = {t: def_raw[i]  + att_mean for i, t in enumerate(teams)}
+        self.rho           = float(res.x[2*n])
+        self.decay         = decay
+        self.reference_date = reference_date
+        self._fitted       = True
         return self
 
     # ── Prediction ────────────────────────────────────────────────────────────

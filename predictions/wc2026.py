@@ -100,9 +100,17 @@ def generate_group_fixtures(groups: dict[str, list[str]]) -> list[tuple[str, str
 
 # ── Convenience: load model trained on WC 2018 + 2022 ───────────────────────
 
-def load_trained_model() -> DixonColesModel:
-    df = load_matches(("2018", "2022"))
-    return DixonColesModel().fit(df)
+def load_trained_model(use_history: bool = True, decay: float = 0.3) -> DixonColesModel:
+    if use_history:
+        from data.loader import load_full_history
+        df = load_full_history(
+            cutoff_date="2026-06-11",
+            window_years=10,
+            competitive_only=True,
+        )
+    else:
+        df = load_matches(("2018", "2022"))
+    return DixonColesModel().fit(df, decay=decay)
 
 
 # ── Single-match prediction ───────────────────────────────────────────────────
@@ -239,7 +247,7 @@ def predict_tournament_winner(
     sep = "═" * 60
     print(f"\n{sep}")
     print(f"  WC 2026 WINNER PREDICTION  ({n_sims:,} simulations)")
-    print(f"  Model: Dixon-Coles trained on WC 2018+2022 | Groups: confirmed draw Dec 2025")
+    print(f"  Model: Dixon-Coles | trained on full international history (2016-2026) w/ time decay")
     print(f"{sep}")
     from tabulate import tabulate as _tab
     print(_tab(rows, headers=["Rank", "Team", "Win Prob", "Fair Odds"],

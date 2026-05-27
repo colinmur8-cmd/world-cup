@@ -59,6 +59,12 @@ def parse_args():
                    help="Backtest winner predictions (2018/2022) then predict 2026")
     p.add_argument("--sims",          type=int, default=50_000,
                    help="Monte Carlo simulations for winner prediction (default: 50000)")
+    p.add_argument("--odds-key",      type=str, default=None,
+                   help="The Odds API key for live bookmaker odds (the-odds-api.com)")
+    p.add_argument("--decay",         type=float, default=0.3,
+                   help="Time-decay rate for Dixon-Coles fitting (default: 0.3/year)")
+    p.add_argument("--no-history",    action="store_true",
+                   help="Train on WC 2018+2022 only, skip full international history download")
     return p.parse_args()
 
 
@@ -133,8 +139,9 @@ def main() -> None:
     args = parse_args()
 
     # Always train model (fast, < 2s)
-    print("  Loading data and fitting Dixon-Coles model (WC 2018 + 2022)…")
-    model = load_trained_model()
+    use_history = not args.no_history
+    print(f"  Loading data and fitting model (history={'full' if use_history else 'WC only'}, decay={args.decay})…")
+    model = load_trained_model(use_history=use_history, decay=args.decay)
     print(f"  Model ready — {len(model.teams)} teams, ρ={model.rho:.4f}\n")
 
     # ── Ratings ──
@@ -148,6 +155,12 @@ def main() -> None:
         if len(parts) != 2:
             print("  Usage: --match \"Team A vs Team B\"")
             sys.exit(1)
+        bk_odds = None
+        if args.odds_key:
+            from data.odds_fetcher import fetch_wc_odds
+            live_odds = fetch_wc_odds(args.odds_key)
+            match_key = (parts[0], parts[1])
+            bk_odds = live_odds.get(match_key, live_odds.get((parts[1], parts[0]), None))
         run_single_match(parts[0], parts[1], model)
         return
 
@@ -169,7 +182,24 @@ def main() -> None:
 
     # ── 2026 predictions ──
     if not args.backtest_only:
-        print_group_predictions(model)
+        live_odds = None
+        if args.odds_key:
+            from data.odds_fetcher import fetch_wc_odds
+            live_odds = fetch_wc_odds(args.odds_key)
+        from predictions.wc2026 import scan_group_stage
+        if live_odds:
+            df_groups = scan_group_stage(model, bookmaker_odds=live_odds)
+            print("\n" + "═" * 110)
+            print("  WC 2026 GROUP STAGE PREDICTIONS (Dixon-Coles model, full history w/ time decay)")
+            print("═" * 110)
+            for grp in sorted(df_groups["Group"].unique()):
+                gdf = df_groups[df_groups["Group"] == grp]
+                print(f"\n  Group {grp}")
+                print(tabulate(gdf.drop(columns="Group"), headers="keys",
+                               tablefmt="rounded_outline", showindex=False))
+            print()
+        else:
+            print_group_predictions(model)
 
 
 if __name__ == "__main__":
