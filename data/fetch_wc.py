@@ -24,7 +24,7 @@ OUT_PATH = os.path.join(os.path.dirname(__file__), "wc_verified.csv")
 
 GITHUB_URL = (
     "https://raw.githubusercontent.com/"
-    "martj42/international-football-results/master/results.csv"
+    "martj42/international_results/master/results.csv"
 )
 
 FD_ORG_URLS = {

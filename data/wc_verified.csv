@@ -1,0 +1,229 @@
+tournament,date,home_team,away_team,home_goals,away_goals
+2018,2018-06-14,Russia,Saudi Arabia,5.0,0.0
+2018,2018-06-15,Egypt,Uruguay,0.0,1.0
+2018,2018-06-15,Morocco,Iran,0.0,1.0
+2018,2018-06-15,Portugal,Spain,3.0,3.0
+2018,2018-06-16,France,Australia,2.0,1.0
+2018,2018-06-16,Argentina,Iceland,1.0,1.0
+2018,2018-06-16,Peru,Denmark,0.0,1.0
+2018,2018-06-16,Croatia,Nigeria,2.0,0.0
+2018,2018-06-17,Costa Rica,Serbia,0.0,1.0
+2018,2018-06-17,Germany,Mexico,0.0,1.0
+2018,2018-06-17,Brazil,Switzerland,1.0,1.0
+2018,2018-06-18,Sweden,South Korea,1.0,0.0
+2018,2018-06-18,Belgium,Panama,3.0,0.0
+2018,2018-06-18,Tunisia,England,1.0,2.0
+2018,2018-06-19,Colombia,Japan,1.0,2.0
+2018,2018-06-19,Poland,Senegal,1.0,2.0
+2018,2018-06-19,Russia,Egypt,3.0,1.0
+2018,2018-06-20,Portugal,Morocco,1.0,0.0
+2018,2018-06-20,Uruguay,Saudi Arabia,1.0,0.0
+2018,2018-06-20,Iran,Spain,0.0,1.0
+2018,2018-06-21,Denmark,Australia,1.0,1.0
+2018,2018-06-21,France,Peru,1.0,0.0
+2018,2018-06-21,Argentina,Croatia,0.0,3.0
+2018,2018-06-22,Brazil,Costa Rica,2.0,0.0
+2018,2018-06-22,Nigeria,Iceland,2.0,0.0
+2018,2018-06-22,Serbia,Switzerland,1.0,2.0
+2018,2018-06-23,Belgium,Tunisia,5.0,2.0
+2018,2018-06-23,South Korea,Mexico,1.0,2.0
+2018,2018-06-23,Germany,Sweden,2.0,1.0
+2018,2018-06-24,England,Panama,6.0,1.0
+2018,2018-06-24,Japan,Senegal,2.0,2.0
+2018,2018-06-24,Poland,Colombia,0.0,3.0
+2018,2018-06-25,Russia,Uruguay,0.0,3.0
+2018,2018-06-25,Saudi Arabia,Egypt,2.0,1.0
+2018,2018-06-25,Spain,Morocco,2.0,2.0
+2018,2018-06-25,Iran,Portugal,1.0,1.0
+2018,2018-06-26,Australia,Peru,0.0,2.0
+2018,2018-06-26,Denmark,France,0.0,0.0
+2018,2018-06-26,Nigeria,Argentina,1.0,2.0
+2018,2018-06-26,Iceland,Croatia,1.0,2.0
+2018,2018-06-27,South Korea,Germany,2.0,0.0
+2018,2018-06-27,Mexico,Sweden,0.0,3.0
+2018,2018-06-27,Serbia,Brazil,0.0,2.0
+2018,2018-06-27,Switzerland,Costa Rica,2.0,2.0
+2018,2018-06-28,Japan,Poland,0.0,1.0
+2018,2018-06-28,Senegal,Colombia,0.0,1.0
+2018,2018-06-28,Panama,Tunisia,1.0,2.0
+2018,2018-06-28,England,Belgium,0.0,1.0
+2018,2018-06-30,France,Argentina,4.0,3.0
+2018,2018-06-30,Uruguay,Portugal,2.0,1.0
+2018,2018-07-01,Russia,Spain,1.0,1.0
+2018,2018-07-01,Croatia,Denmark,1.0,1.0
+2018,2018-07-02,Brazil,Mexico,2.0,0.0
+2018,2018-07-02,Belgium,Japan,3.0,2.0
+2018,2018-07-03,Sweden,Switzerland,1.0,0.0
+2018,2018-07-03,Colombia,England,1.0,1.0
+2018,2018-07-06,Uruguay,France,0.0,2.0
+2018,2018-07-06,Brazil,Belgium,1.0,2.0
+2018,2018-07-07,Sweden,England,0.0,2.0
+2018,2018-07-07,Russia,Croatia,2.0,2.0
+2018,2018-07-10,France,Belgium,1.0,0.0
+2018,2018-07-11,Croatia,England,2.0,1.0
+2018,2018-07-14,Belgium,England,2.0,0.0
+2018,2018-07-15,France,Croatia,4.0,2.0
+2022,2022-01-27,Jamaica,Mexico,1.0,2.0
+2022,2022-01-27,United States,El Salvador,1.0,0.0
+2022,2022-01-27,Honduras,Canada,0.0,2.0
+2022,2022-01-27,Costa Rica,Panama,1.0,0.0
+2022,2022-01-27,Lebanon,South Korea,0.0,1.0
+2022,2022-01-27,Iran,Iraq,1.0,0.0
+2022,2022-01-27,United Arab Emirates,Syria,2.0,0.0
+2022,2022-01-27,Japan,China PR,2.0,0.0
+2022,2022-01-27,Australia,Vietnam,4.0,0.0
+2022,2022-01-27,Saudi Arabia,Oman,1.0,0.0
+2022,2022-01-27,Ecuador,Brazil,1.0,1.0
+2022,2022-01-27,Paraguay,Uruguay,0.0,1.0
+2022,2022-01-27,Chile,Argentina,1.0,2.0
+2022,2022-01-28,Colombia,Peru,0.0,1.0
+2022,2022-01-28,Venezuela,Bolivia,4.0,1.0
+2022,2022-01-30,Canada,United States,2.0,0.0
+2022,2022-01-30,Mexico,Costa Rica,0.0,0.0
+2022,2022-01-30,Panama,Jamaica,3.0,2.0
+2022,2022-01-30,Honduras,El Salvador,0.0,2.0
+2022,2022-02-01,Lebanon,Iraq,1.0,1.0
+2022,2022-02-01,Iran,United Arab Emirates,1.0,0.0
+2022,2022-02-01,Syria,South Korea,0.0,2.0
+2022,2022-02-01,Vietnam,China PR,3.0,1.0
+2022,2022-02-01,Japan,Saudi Arabia,2.0,0.0
+2022,2022-02-01,Oman,Australia,2.0,2.0
+2022,2022-02-01,Bolivia,Chile,2.0,3.0
+2022,2022-02-01,Uruguay,Venezuela,4.0,1.0
+2022,2022-02-01,Argentina,Colombia,1.0,0.0
+2022,2022-02-01,Peru,Ecuador,1.0,1.0
+2022,2022-02-01,Brazil,Paraguay,4.0,0.0
+2022,2022-02-02,United States,Honduras,3.0,0.0
+2022,2022-02-02,Jamaica,Costa Rica,0.0,1.0
+2022,2022-02-02,El Salvador,Canada,0.0,2.0
+2022,2022-02-02,Mexico,Panama,1.0,0.0
+2022,2022-03-17,Cook Islands,Solomon Islands,0.0,2.0
+2022,2022-03-18,Papua New Guinea,New Zealand,0.0,1.0
+2022,2022-03-18,New Caledonia,Fiji,1.0,2.0
+2022,2022-03-21,Papua New Guinea,New Caledonia,1.0,0.0
+2022,2022-03-21,New Zealand,Fiji,4.0,0.0
+2022,2022-03-24,Jamaica,El Salvador,1.0,1.0
+2022,2022-03-24,Mexico,United States,0.0,0.0
+2022,2022-03-24,Panama,Honduras,1.0,1.0
+2022,2022-03-24,Costa Rica,Canada,1.0,0.0
+2022,2022-03-24,Lebanon,Syria,0.0,3.0
+2022,2022-03-24,Iraq,United Arab Emirates,1.0,0.0
+2022,2022-03-24,South Korea,Iran,2.0,0.0
+2022,2022-03-24,China PR,Saudi Arabia,1.0,1.0
+2022,2022-03-24,Vietnam,Oman,0.0,1.0
+2022,2022-03-24,Australia,Japan,0.0,2.0
+2022,2022-03-24,Solomon Islands,Tahiti,3.0,1.0
+2022,2022-03-24,Fiji,Papua New Guinea,1.0,2.0
+2022,2022-03-24,New Zealand,New Caledonia,7.0,1.0
+2022,2022-03-24,Colombia,Bolivia,3.0,0.0
+2022,2022-03-24,Brazil,Chile,4.0,0.0
+2022,2022-03-24,Paraguay,Ecuador,3.0,1.0
+2022,2022-03-24,Uruguay,Peru,1.0,0.0
+2022,2022-03-24,Italy,North Macedonia,0.0,1.0
+2022,2022-03-24,Portugal,Turkey,3.0,1.0
+2022,2022-03-24,Sweden,Czech Republic,1.0,0.0
+2022,2022-03-24,Wales,Austria,2.0,1.0
+2022,2022-03-25,Cameroon,Algeria,0.0,1.0
+2022,2022-03-25,DR Congo,Morocco,1.0,1.0
+2022,2022-03-25,Egypt,Senegal,1.0,0.0
+2022,2022-03-25,Ghana,Nigeria,0.0,0.0
+2022,2022-03-25,Mali,Tunisia,0.0,1.0
+2022,2022-03-25,Argentina,Venezuela,3.0,0.0
+2022,2022-03-27,El Salvador,Costa Rica,1.0,2.0
+2022,2022-03-27,Canada,Jamaica,4.0,0.0
+2022,2022-03-27,Honduras,Mexico,0.0,1.0
+2022,2022-03-27,United States,Panama,5.0,1.0
+2022,2022-03-27,New Zealand,Tahiti,1.0,0.0
+2022,2022-03-27,Solomon Islands,Papua New Guinea,3.0,2.0
+2022,2022-03-29,Algeria,Cameroon,1.0,2.0
+2022,2022-03-29,Morocco,DR Congo,4.0,1.0
+2022,2022-03-29,Nigeria,Ghana,1.0,1.0
+2022,2022-03-29,Senegal,Egypt,1.0,0.0
+2022,2022-03-29,Tunisia,Mali,0.0,0.0
+2022,2022-03-29,Iran,Lebanon,2.0,0.0
+2022,2022-03-29,Syria,Iraq,1.0,1.0
+2022,2022-03-29,United Arab Emirates,South Korea,1.0,0.0
+2022,2022-03-29,Japan,Vietnam,1.0,1.0
+2022,2022-03-29,Oman,China PR,2.0,0.0
+2022,2022-03-29,Saudi Arabia,Australia,1.0,0.0
+2022,2022-03-29,Ecuador,Argentina,1.0,1.0
+2022,2022-03-29,Peru,Paraguay,2.0,0.0
+2022,2022-03-29,Bolivia,Brazil,0.0,4.0
+2022,2022-03-29,Venezuela,Colombia,0.0,1.0
+2022,2022-03-29,Chile,Uruguay,0.0,2.0
+2022,2022-03-29,Poland,Sweden,2.0,0.0
+2022,2022-03-29,Portugal,North Macedonia,2.0,0.0
+2022,2022-03-30,Mexico,El Salvador,2.0,0.0
+2022,2022-03-30,Costa Rica,United States,2.0,0.0
+2022,2022-03-30,Panama,Canada,1.0,0.0
+2022,2022-03-30,Jamaica,Honduras,2.0,1.0
+2022,2022-03-30,Solomon Islands,New Zealand,0.0,5.0
+2022,2022-06-01,Scotland,Ukraine,1.0,3.0
+2022,2022-06-05,Wales,Ukraine,1.0,0.0
+2022,2022-06-07,United Arab Emirates,Australia,1.0,2.0
+2022,2022-06-13,Australia,Peru,0.0,0.0
+2022,2022-06-14,Costa Rica,New Zealand,1.0,0.0
+2022,2022-11-20,Qatar,Ecuador,0.0,2.0
+2022,2022-11-21,Senegal,Netherlands,0.0,2.0
+2022,2022-11-21,England,Iran,6.0,2.0
+2022,2022-11-21,United States,Wales,1.0,1.0
+2022,2022-11-22,Argentina,Saudi Arabia,1.0,2.0
+2022,2022-11-22,Mexico,Poland,0.0,0.0
+2022,2022-11-22,Denmark,Tunisia,0.0,0.0
+2022,2022-11-22,France,Australia,4.0,1.0
+2022,2022-11-23,Germany,Japan,1.0,2.0
+2022,2022-11-23,Spain,Costa Rica,7.0,0.0
+2022,2022-11-23,Morocco,Croatia,0.0,0.0
+2022,2022-11-23,Belgium,Canada,1.0,0.0
+2022,2022-11-24,Switzerland,Cameroon,1.0,0.0
+2022,2022-11-24,Brazil,Serbia,2.0,0.0
+2022,2022-11-24,Uruguay,South Korea,0.0,0.0
+2022,2022-11-24,Portugal,Ghana,3.0,2.0
+2022,2022-11-25,Qatar,Senegal,1.0,3.0
+2022,2022-11-25,Netherlands,Ecuador,1.0,1.0
+2022,2022-11-25,Wales,Iran,0.0,2.0
+2022,2022-11-25,England,United States,0.0,0.0
+2022,2022-11-26,Poland,Saudi Arabia,2.0,0.0
+2022,2022-11-26,Argentina,Mexico,2.0,0.0
+2022,2022-11-26,Tunisia,Australia,0.0,1.0
+2022,2022-11-26,France,Denmark,2.0,1.0
+2022,2022-11-27,Japan,Costa Rica,0.0,1.0
+2022,2022-11-27,Spain,Germany,1.0,1.0
+2022,2022-11-27,Belgium,Morocco,0.0,2.0
+2022,2022-11-27,Croatia,Canada,4.0,1.0
+2022,2022-11-28,Cameroon,Serbia,3.0,3.0
+2022,2022-11-28,Brazil,Switzerland,1.0,0.0
+2022,2022-11-28,South Korea,Ghana,2.0,3.0
+2022,2022-11-28,Portugal,Uruguay,2.0,0.0
+2022,2022-11-29,Ecuador,Senegal,1.0,2.0
+2022,2022-11-29,Qatar,Netherlands,0.0,2.0
+2022,2022-11-29,Wales,England,0.0,3.0
+2022,2022-11-29,Iran,United States,0.0,1.0
+2022,2022-11-30,Poland,Argentina,0.0,2.0
+2022,2022-11-30,Saudi Arabia,Mexico,1.0,2.0
+2022,2022-11-30,Australia,Denmark,1.0,0.0
+2022,2022-11-30,Tunisia,France,1.0,0.0
+2022,2022-12-01,Japan,Spain,2.0,1.0
+2022,2022-12-01,Costa Rica,Germany,2.0,4.0
+2022,2022-12-01,Croatia,Belgium,0.0,0.0
+2022,2022-12-01,Canada,Morocco,1.0,2.0
+2022,2022-12-02,Serbia,Switzerland,2.0,3.0
+2022,2022-12-02,Cameroon,Brazil,1.0,0.0
+2022,2022-12-02,Ghana,Uruguay,0.0,2.0
+2022,2022-12-02,South Korea,Portugal,2.0,1.0
+2022,2022-12-03,Netherlands,United States,3.0,1.0
+2022,2022-12-03,Argentina,Australia,2.0,1.0
+2022,2022-12-04,France,Poland,3.0,1.0
+2022,2022-12-04,England,Senegal,3.0,0.0
+2022,2022-12-05,Japan,Croatia,1.0,1.0
+2022,2022-12-05,Brazil,South Korea,4.0,1.0
+2022,2022-12-06,Morocco,Spain,0.0,0.0
+2022,2022-12-06,Portugal,Switzerland,6.0,1.0
+2022,2022-12-09,Croatia,Brazil,1.0,1.0
+2022,2022-12-09,Netherlands,Argentina,2.0,2.0
+2022,2022-12-10,Morocco,Portugal,1.0,0.0
+2022,2022-12-10,England,France,1.0,2.0
+2022,2022-12-13,Argentina,Croatia,3.0,0.0
+2022,2022-12-14,France,Morocco,2.0,0.0
+2022,2022-12-17,Croatia,Morocco,2.0,1.0
+2022,2022-12-18,Argentina,France,3.0,3.0

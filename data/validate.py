@@ -229,8 +229,12 @@ def diff_against_csv(csv_path: str) -> pd.DataFrame:
     ext.rename(columns=rename, inplace=True)
     ext["date"] = pd.to_datetime(ext["date"])
 
-    # Filter to WC matches
-    wc_filter = ext["tournament"].str.upper().str.contains("WORLD CUP", na=False)
+    # Filter to WC matches — handle both string ("FIFA World Cup") and
+    # integer/numeric year-only tournament columns (e.g. from wc_verified.csv).
+    if pd.api.types.is_string_dtype(ext["tournament"]):
+        wc_filter = ext["tournament"].str.upper().str.contains("WORLD CUP", na=False)
+    else:
+        wc_filter = ext["tournament"].isin([2018, 2022, "2018", "2022"])
     ext_wc = ext[wc_filter & ext["date"].dt.year.isin([2018, 2022])].copy()
 
     if ext_wc.empty:

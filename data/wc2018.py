@@ -8,7 +8,7 @@ MATCHES_2018 = [
     # ── GROUP A ──────────────────────────────────────────────────────────────
     ("Group A", "2018-06-14", "Russia",       "Saudi Arabia", 5, 0),
     ("Group A", "2018-06-15", "Egypt",         "Uruguay",      0, 1),
-    ("Group A", "2018-06-19", "Russia",        "Egypt",        3, 0),
+    ("Group A", "2018-06-19", "Russia",        "Egypt",        3, 1),
     ("Group A", "2018-06-20", "Uruguay",       "Saudi Arabia", 1, 0),
     ("Group A", "2018-06-25", "Uruguay",       "Russia",       3, 0),
     ("Group A", "2018-06-25", "Saudi Arabia",  "Egypt",        2, 1),
