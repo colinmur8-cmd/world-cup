@@ -67,11 +67,12 @@ def get_model(use_hist: bool, dec: float):
 
 # ── Main tabs ─────────────────────────────────────────────────────────────────
 
-tab_winner, tab_groups, tab_match, tab_backtest = st.tabs([
+tab_winner, tab_groups, tab_match, tab_backtest, tab_matchbt = st.tabs([
     "🏆 Tournament Winner",
     "📊 Group Stage",
     "🆚 Match Predictor",
-    "📈 Backtest",
+    "📈 Winner Backtest",
+    "🔬 Match Backtest",
 ])
 
 # ═══════════════════════════════════════════════════════════
@@ -251,17 +252,22 @@ with tab_match:
                        for s, p in mkt["correct_score"][:8]]
             st.dataframe(pd.DataFrame(cs_rows), hide_index=True, use_container_width=True)
 
-        # Value bets
+        # Value bets + Kelly staking
         if result["value_bets"]:
             st.divider()
+            bankroll = st.number_input("Bankroll (£)", min_value=10, value=1000, step=50,
+                                       key="bankroll_match")
             st.markdown("**🟢 Value Bets Detected**")
             vb_rows = [{"Market": v.market, "Selection": v.selection,
                         "Model": f"{v.model_prob*100:.1f}%",
                         "Implied": f"{v.implied_prob*100:.1f}%",
                         "Edge": f"{v.edge*100:+.1f}pp",
-                        "Odds": v.bk_odds}
+                        "Odds": v.bk_odds,
+                        "Half-Kelly stake": f"£{v.half_kelly * bankroll:.2f}",
+                        "Full-Kelly stake": f"£{v.kelly_fraction * bankroll:.2f}"}
                        for v in result["value_bets"]]
             st.dataframe(pd.DataFrame(vb_rows), hide_index=True, use_container_width=True)
+            st.caption("Half-Kelly is recommended — full Kelly is theoretically optimal but very aggressive.")
 
     else:
         st.info("Select teams in the sidebar then press **Predict Match**.")
@@ -295,3 +301,145 @@ with tab_backtest:
                 st.dataframe(pd.DataFrame(top_rows), hide_index=True, use_container_width=True)
     else:
         st.info("Press **Run Backtest** to validate the model against 2018 and 2022.")
+
+
+# ═══════════════════════════════════════════════════════════
+# TAB 5 — Match-level Backtest
+# ═══════════════════════════════════════════════════════════
+with tab_matchbt:
+    st.subheader("Match-Level Backtest — 2018 & 2022 WC")
+    st.write(
+        "Trains on pre-tournament international history, predicts every WC match, "
+        "then checks accuracy, calibration, and simulated P&L."
+    )
+    st.caption(
+        "⚠️ Bookmaker odds are **simulated** (6% margin over model fair odds) — real historical "
+        "odds aren't available. This shows calibration and edge detection quality, not guaranteed profit."
+    )
+
+    col_bt1, col_bt2 = st.columns(2)
+    with col_bt1:
+        bt_margin   = st.slider("Simulated bookie margin", 0.02, 0.12, 0.06, 0.01,
+                                 key="bt_margin", help="Typical sportsbook overround 4–8%")
+        bt_min_edge = st.slider("Min edge to bet", 0.01, 0.10, 0.03, 0.01, key="bt_edge")
+    with col_bt2:
+        bt_bankroll = st.number_input("Starting bankroll (£)", 100, 100_000, 1000, 100,
+                                       key="bt_bankroll")
+        bt_kelly    = st.slider("Kelly fraction", 0.1, 1.0, 0.5, 0.1, key="bt_kelly",
+                                help="0.5 = half-Kelly (recommended)")
+
+    if st.button("▶  Run Match Backtest", type="primary", key="btn_matchbt"):
+        with st.spinner("Loading pre-tournament histories and predicting all 128 matches…"):
+            from backtest.match_backtest import (
+                run_match_backtest, summary_metrics, calibration_table, pnl_simulation
+            )
+            preds = run_match_backtest(years=("2018", "2022"), verbose=False)
+
+        metrics = summary_metrics(preds)
+
+        # ── Headline metrics ──
+        m1, m2, m3, m4, m5 = st.columns(5)
+        m1.metric("Matches",         metrics["matches"])
+        m2.metric("Result accuracy", f"{metrics['result_acc']*100:.1f}%",
+                  help="Picking correct 1X2 outcome. Naive baseline ~45%.")
+        m3.metric("Brier score",     f"{metrics['brier_1x2']:.4f}",
+                  help="Lower is better. Random guessing = 0.222")
+        m4.metric("BTTS accuracy",   f"{metrics['btts_acc']*100:.1f}%")
+        m5.metric("O/U 2.5 acc",     f"{metrics['ou25_acc']*100:.1f}%")
+
+        st.divider()
+
+        # ── Match-by-match table ──
+        st.markdown("#### All Predictions vs Actuals")
+        match_rows = []
+        for p in preds:
+            match_rows.append({
+                "Year":   p.year,
+                "Stage":  p.stage,
+                "Home":   p.home,
+                "Away":   p.away,
+                "Score":  f"{p.actual_hg}–{p.actual_ag}",
+                "xG":     f"{p.xg_home:.2f}–{p.xg_away:.2f}",
+                "P(H)":   f"{p.p_home*100:.0f}%",
+                "P(D)":   f"{p.p_draw*100:.0f}%",
+                "P(A)":   f"{p.p_away*100:.0f}%",
+                "Pred":   p.predicted_result.upper()[0],
+                "Actual": p.actual_result.upper()[0],
+                "✓":      "✓" if p.correct_result else "✗",
+                "BTTS":   "✓" if p.btts_actual else "✗",
+                "O2.5":   "✓" if p.over25_actual else "✗",
+            })
+
+        df_matches = pd.DataFrame(match_rows)
+
+        def _color_correct(row):
+            color = "#d4edda" if row["✓"] == "✓" else "#f8d7da"
+            return [f"background-color: {color}"] * len(row)
+
+        st.dataframe(
+            df_matches.style.apply(_color_correct, axis=1),
+            use_container_width=True, hide_index=True, height=400,
+        )
+
+        st.divider()
+
+        # ── Calibration ──
+        st.markdown("#### Calibration — 1X2 Predictions")
+        st.write("When the model says 70%, does it happen 70% of the time? Perfect model = diagonal line.")
+        cal = calibration_table(preds)
+
+        cal_chart = cal.set_index("Predicted (mid)")[["Actual freq"]].copy()
+        cal_chart.index.name = "Predicted probability"
+
+        col_cal1, col_cal2 = st.columns([2, 1])
+        with col_cal1:
+            st.line_chart(cal_chart, use_container_width=True)
+        with col_cal2:
+            st.dataframe(cal, hide_index=True, use_container_width=True)
+
+        st.divider()
+
+        # ── P&L simulation ──
+        st.markdown("#### Simulated P&L (synthetic bookie odds)")
+        pnl = pnl_simulation(
+            preds,
+            margin=bt_margin,
+            min_edge=bt_min_edge,
+            kelly_fraction=bt_kelly,
+            flat_stake=bt_bankroll / 100,
+            bankroll=bt_bankroll,
+        )
+
+        if pnl.empty:
+            st.warning(f"No bets found with ≥{bt_min_edge*100:.0f}pp edge at {bt_margin*100:.0f}% margin. "
+                       "Lower the min edge or margin.")
+        else:
+            n_bets = len(pnl)
+            wins   = (pnl["Won"] == "✓").sum()
+            final_flat  = pnl["Flat Balance"].iloc[-1]
+            final_kelly = pnl["Kelly Balance"].iloc[-1]
+
+            p1, p2, p3, p4 = st.columns(4)
+            p1.metric("Bets placed",       n_bets)
+            p2.metric("Win rate",          f"{wins/n_bets*100:.1f}%")
+            p3.metric("Flat final balance",
+                      f"£{final_flat:.0f}",
+                      f"{(final_flat - bt_bankroll)/bt_bankroll*100:+.1f}%")
+            p4.metric("Kelly final balance",
+                      f"£{final_kelly:.0f}",
+                      f"{(final_kelly - bt_bankroll)/bt_bankroll*100:+.1f}%")
+
+            # Equity curve
+            eq = pnl[["Flat Balance", "Kelly Balance"]].reset_index(drop=True)
+            eq.index.name = "Bet #"
+            st.line_chart(eq, use_container_width=True)
+
+            st.markdown("**All bets placed**")
+            st.dataframe(
+                pnl[["Year","Stage","Match","Selection","Model %","Edge","Bk Odds","Won",
+                      "Flat P&L","Flat Balance","Kelly Stake","Kelly P&L","Kelly Balance"]],
+                use_container_width=True, hide_index=True,
+            )
+
+    else:
+        st.info("Press **Run Match Backtest** to see prediction accuracy, calibration, and simulated P&L.")
