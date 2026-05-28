@@ -67,8 +67,16 @@ def get_model(use_hist: bool, dec: float):
 
 @st.cache_resource(show_spinner=False)
 def get_stat_models(dec: float):
+    # Only called after the cache CSV exists — never downloads automatically.
+    import os
+    cache = os.path.join("data", "_statsbomb_stats_cache.csv")
+    if not os.path.exists(cache):
+        return {}
     from predictions.wc2026 import load_stat_models
-    return load_stat_models(decay=dec, verbose=False)
+    try:
+        return load_stat_models(decay=dec, verbose=False)
+    except Exception:
+        return {}
 
 
 # ── Main tabs ─────────────────────────────────────────────────────────────────
@@ -282,65 +290,61 @@ with tab_match:
     st.divider()
     st.subheader("Corners / Cards / Shots Markets")
 
-    stat_models = get_stat_models(decay)
+    import os as _os
+    _sb_cache = _os.path.join("data", "_statsbomb_stats_cache.csv")
+    _cache_ready = _os.path.exists(_sb_cache)
 
-    if not stat_models:
-        st.info("StatsBomb data not downloaded yet. Press the button below once (~3 min) to unlock corners, yellow cards, and shots on target markets.")
+    if not _cache_ready:
+        st.info("StatsBomb data not downloaded yet. Press the button below once (~3–5 min) to unlock these markets.")
         if st.button("📥 Build Stat Models (one-time download)", key="btn_build_stats"):
-            with st.spinner("Downloading StatsBomb event data for WC 2018/2022, Copa America, AFCON… (~3 min)"):
-                from data.statsbomb_loader import load_statsbomb_match_stats
-                load_statsbomb_match_stats(refresh=True, verbose=False)
+            with st.spinner("Downloading StatsBomb event data for WC 2018/2022, Copa America, AFCON… (~3–5 min)"):
+                try:
+                    from data.statsbomb_loader import load_statsbomb_match_stats
+                    load_statsbomb_match_stats(refresh=True, verbose=False)
+                except Exception as e:
+                    st.error(f"Download failed: {e}")
             st.cache_resource.clear()
             st.rerun()
     else:
-        from model.markets import stat_markets
-        smkt = stat_markets(stat_models, home_team, away_team)
+        stat_models = get_stat_models(decay)
+        if not stat_models:
+            st.warning("Cache file found but models failed to load. Try refreshing the page.")
+        else:
+            from model.markets import stat_markets
+            smkt = stat_markets(stat_models, home_team, away_team)
+            col_cn, col_cd, col_sh = st.columns(3)
 
-        col_cn, col_cd, col_sh = st.columns(3)
+            with col_cn:
+                st.markdown("**Corners**")
+                if "corners" in smkt:
+                    c = smkt["corners"]
+                    st.caption(f"xC: {home_team} {c['home_expected']} — {away_team} {c['away_expected']} (total {c['total_expected']})")
+                    st.dataframe(pd.DataFrame([
+                        {"Line": f"O/U {l}", "Over": f"{v['over']*100:.1f}%", "Under": f"{v['under']*100:.1f}%"}
+                        for l, v in c["over_under"].items()
+                    ]), hide_index=True, use_container_width=True)
 
-        with col_cn:
-            st.markdown("**Corners**")
-            if "corners" in smkt:
-                c = smkt["corners"]
-                st.caption(f"Expected: {home_team} {c['home_expected']} — {away_team} {c['away_expected']} (total {c['total_expected']})")
-                cn_rows = [
-                    {"Line": f"O/U {line}", "Over": f"{v['over']*100:.1f}%", "Under": f"{v['under']*100:.1f}%"}
-                    for line, v in c["over_under"].items()
-                ]
-                st.dataframe(pd.DataFrame(cn_rows), hide_index=True, use_container_width=True)
-            else:
-                st.info("No corner data")
+            with col_cd:
+                st.markdown("**Yellow Cards**")
+                if "yellow_cards" in smkt:
+                    cd = smkt["yellow_cards"]
+                    st.caption(f"xY: {home_team} {cd['home_expected']} — {away_team} {cd['away_expected']} (total {cd['total_expected']})")
+                    st.dataframe(pd.DataFrame([
+                        {"Line": f"O/U {l}", "Over": f"{v['over']*100:.1f}%", "Under": f"{v['under']*100:.1f}%"}
+                        for l, v in cd["over_under"].items()
+                    ]), hide_index=True, use_container_width=True)
 
-        with col_cd:
-            st.markdown("**Yellow Cards**")
-            if "yellow_cards" in smkt:
-                cd = smkt["yellow_cards"]
-                st.caption(f"Expected: {home_team} {cd['home_expected']} — {away_team} {cd['away_expected']} (total {cd['total_expected']})")
-                cd_rows = [
-                    {"Line": f"O/U {line}", "Over": f"{v['over']*100:.1f}%", "Under": f"{v['under']*100:.1f}%"}
-                    for line, v in cd["over_under"].items()
-                ]
-                st.dataframe(pd.DataFrame(cd_rows), hide_index=True, use_container_width=True)
-            else:
-                st.info("No card data")
+            with col_sh:
+                st.markdown("**Shots on Target**")
+                if "shots_on_target" in smkt:
+                    sh = smkt["shots_on_target"]
+                    st.caption(f"xSOT: {home_team} {sh['home_expected']} — {away_team} {sh['away_expected']} (total {sh['total_expected']})")
+                    st.dataframe(pd.DataFrame([
+                        {"Line": f"O/U {l}", "Over": f"{v['over']*100:.1f}%", "Under": f"{v['under']*100:.1f}%"}
+                        for l, v in sh["over_under"].items()
+                    ]), hide_index=True, use_container_width=True)
 
-        with col_sh:
-            st.markdown("**Shots on Target**")
-            if "shots_on_target" in smkt:
-                sh = smkt["shots_on_target"]
-                st.caption(f"Expected: {home_team} {sh['home_expected']} — {away_team} {sh['away_expected']} (total {sh['total_expected']})")
-                sh_rows = [
-                    {"Line": f"O/U {line}", "Over": f"{v['over']*100:.1f}%", "Under": f"{v['under']*100:.1f}%"}
-                    for line, v in sh["over_under"].items()
-                ]
-                st.dataframe(pd.DataFrame(sh_rows), hide_index=True, use_container_width=True)
-            else:
-                st.info("No shots data")
-
-        st.caption(
-            "⚠️ Stat models trained on StatsBomb free data (~200 international matches). "
-            "Add API-Football ($19/mo) for WC qualifier data and significantly better accuracy."
-        )
+            st.caption("Trained on StatsBomb free data (~200 intl matches). API-Football ($19/mo) adds qualifier data for better accuracy.")
 
 
 # ═══════════════════════════════════════════════════════════
