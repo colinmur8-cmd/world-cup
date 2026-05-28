@@ -98,6 +98,46 @@ def generate_group_fixtures(groups: dict[str, list[str]]) -> list[tuple[str, str
     return fixtures
 
 
+# ── Stat models: corners, cards, shots ───────────────────────────────────────
+
+def load_stat_models(decay: float = 0.3, verbose: bool = False) -> dict:
+    """
+    Load Poisson rate models for corners, yellow cards, and shots on target,
+    trained on StatsBomb free international data (WC 2018/2022, Copa, AFCON).
+
+    Returns dict with keys: 'corners', 'yellow_cards', 'shots_on_target'
+    Each value is a PoissonRateModel (or None if data unavailable).
+    """
+    from data.statsbomb_loader import load_statsbomb_match_stats
+    from model.stat_model import fit_corners_model, fit_yellow_cards_model, fit_shots_model
+
+    try:
+        stats_df = load_statsbomb_match_stats(verbose=verbose)
+    except Exception as e:
+        if verbose:
+            print(f"  [stat_models] Could not load StatsBomb data: {e}")
+        return {}
+
+    if stats_df.empty:
+        return {}
+
+    models = {}
+    try:
+        models["corners"]          = fit_corners_model(stats_df, decay=decay)
+    except Exception:
+        pass
+    try:
+        models["yellow_cards"]     = fit_yellow_cards_model(stats_df, decay=decay)
+    except Exception:
+        pass
+    try:
+        models["shots_on_target"]  = fit_shots_model(stats_df, decay=decay)
+    except Exception:
+        pass
+
+    return models
+
+
 # ── Convenience: load model trained on WC 2018 + 2022 ───────────────────────
 
 def load_trained_model(use_history: bool = True, decay: float = 0.3) -> DixonColesModel:

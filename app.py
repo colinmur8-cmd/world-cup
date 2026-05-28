@@ -65,6 +65,12 @@ def get_model(use_hist: bool, dec: float):
     return load_trained_model(use_history=use_hist, decay=dec)
 
 
+@st.cache_resource(show_spinner=False)
+def get_stat_models(dec: float):
+    from predictions.wc2026 import load_stat_models
+    return load_stat_models(decay=dec, verbose=False)
+
+
 # ── Main tabs ─────────────────────────────────────────────────────────────────
 
 tab_winner, tab_groups, tab_match, tab_backtest, tab_matchbt = st.tabs([
@@ -268,6 +274,74 @@ with tab_match:
                        for v in result["value_bets"]]
             st.dataframe(pd.DataFrame(vb_rows), hide_index=True, use_container_width=True)
             st.caption("Half-Kelly is recommended — full Kelly is theoretically optimal but very aggressive.")
+
+        # ── Stat markets: corners, cards, shots ──
+        st.divider()
+        st.markdown("#### Ancillary Markets")
+        with st.spinner("Loading corner / card / shots models…"):
+            stat_models = get_stat_models(decay)
+
+        if not stat_models:
+            st.info(
+                "Stat models not loaded yet. Click **Build Stat Models** to download StatsBomb data "
+                "(one-time, ~2 min) and unlock corners, cards, and shots markets."
+            )
+            if st.button("📥 Build Stat Models", key="btn_build_stats"):
+                with st.spinner("Downloading StatsBomb event data for WC 2018/2022, Copa, AFCON…"):
+                    from data.statsbomb_loader import load_statsbomb_match_stats
+                    load_statsbomb_match_stats(refresh=True, verbose=False)
+                st.cache_resource.clear()
+                st.rerun()
+        else:
+            from model.markets import stat_markets
+            smkt = stat_markets(stat_models, home_team, away_team)
+
+            col_cn, col_cd, col_sh = st.columns(3)
+
+            with col_cn:
+                st.markdown("**Corners**")
+                if "corners" in smkt:
+                    c = smkt["corners"]
+                    st.caption(f"Expected: {home_team} {c['home_expected']} — {away_team} {c['away_expected']} (total {c['total_expected']})")
+                    cn_rows = [
+                        {"Line": f"O/U {line}", "Over": f"{v['over']*100:.1f}%", "Under": f"{v['under']*100:.1f}%"}
+                        for line, v in c["over_under"].items()
+                    ]
+                    st.dataframe(pd.DataFrame(cn_rows), hide_index=True, use_container_width=True)
+                else:
+                    st.info("No corner data")
+
+            with col_cd:
+                st.markdown("**Yellow Cards**")
+                if "yellow_cards" in smkt:
+                    cd = smkt["yellow_cards"]
+                    st.caption(f"Expected: {home_team} {cd['home_expected']} — {away_team} {cd['away_expected']} (total {cd['total_expected']})")
+                    cd_rows = [
+                        {"Line": f"O/U {line}", "Over": f"{v['over']*100:.1f}%", "Under": f"{v['under']*100:.1f}%"}
+                        for line, v in cd["over_under"].items()
+                    ]
+                    st.dataframe(pd.DataFrame(cd_rows), hide_index=True, use_container_width=True)
+                else:
+                    st.info("No card data")
+
+            with col_sh:
+                st.markdown("**Shots on Target**")
+                if "shots_on_target" in smkt:
+                    sh = smkt["shots_on_target"]
+                    st.caption(f"Expected: {home_team} {sh['home_expected']} — {away_team} {sh['away_expected']} (total {sh['total_expected']})")
+                    sh_rows = [
+                        {"Line": f"O/U {line}", "Over": f"{v['over']*100:.1f}%", "Under": f"{v['under']*100:.1f}%"}
+                        for line, v in sh["over_under"].items()
+                    ]
+                    st.dataframe(pd.DataFrame(sh_rows), hide_index=True, use_container_width=True)
+                else:
+                    st.info("No shots data")
+
+            if stat_models:
+                st.caption(
+                    "⚠️ Stat models trained on StatsBomb free data (~200 international matches). "
+                    "Add API-Football ($19/mo) for WC qualifier data and significantly better accuracy."
+                )
 
     else:
         st.info("Select teams in the sidebar then press **Predict Match**.")

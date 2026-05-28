@@ -153,3 +153,51 @@ def all_markets(model: DixonColesModel, home: str, away: str) -> dict:
         },
         "correct_score": correct_score(model, home, away),
     }
+
+
+# ── Stat model markets (corners, cards, shots) ────────────────────────────────
+
+def stat_markets(stat_models: dict, home: str, away: str) -> dict:
+    """
+    Compute over/under markets for corners, yellow cards, shots on target.
+
+    stat_models: dict returned by load_stat_models() in predictions/wc2026.py
+        keys: 'corners', 'yellow_cards', 'shots_on_target'
+    """
+    out: dict[str, dict] = {}
+
+    corners_model = stat_models.get("corners")
+    if corners_model:
+        lam_h, lam_a = corners_model.predict(home, away)
+        out["corners"] = {
+            "home_expected": round(lam_h, 2),
+            "away_expected": round(lam_a, 2),
+            "total_expected": round(lam_h + lam_a, 2),
+            "over_under": corners_model.over_under(home, away, lines=(8.5, 9.5, 10.5, 11.5)),
+            "home_over_under": corners_model.home_over_under(home, away, lines=(4.5, 5.5, 6.5)),
+            "away_over_under": corners_model.away_over_under(home, away, lines=(3.5, 4.5, 5.5)),
+        }
+
+    cards_model = stat_models.get("yellow_cards")
+    if cards_model:
+        lam_h, lam_a = cards_model.predict(home, away)
+        out["yellow_cards"] = {
+            "home_expected": round(lam_h, 2),
+            "away_expected": round(lam_a, 2),
+            "total_expected": round(lam_h + lam_a, 2),
+            "over_under": cards_model.over_under(home, away, lines=(2.5, 3.5, 4.5, 5.5)),
+        }
+
+    shots_model = stat_models.get("shots_on_target")
+    if shots_model:
+        lam_h, lam_a = shots_model.predict(home, away)
+        out["shots_on_target"] = {
+            "home_expected": round(lam_h, 2),
+            "away_expected": round(lam_a, 2),
+            "total_expected": round(lam_h + lam_a, 2),
+            "over_under": shots_model.over_under(home, away, lines=(4.5, 5.5, 6.5, 7.5)),
+            "home_over_under": shots_model.home_over_under(home, away, lines=(2.5, 3.5, 4.5)),
+            "away_over_under": shots_model.away_over_under(home, away, lines=(1.5, 2.5, 3.5)),
+        }
+
+    return out
