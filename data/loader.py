@@ -165,7 +165,13 @@ def load_full_history(
     df["total_goals"] = df["home_goals"] + df["away_goals"]
     df["stage"] = df.get("tournament", pd.Series("International", index=df.index))
 
-    cols = ["stage", "date", "home_team", "away_team", "home_goals", "away_goals", "total_goals"]
+    # Preserve neutral-venue flag when available (True for WC, continental finals, etc.)
+    base_cols = ["stage", "date", "home_team", "away_team", "home_goals", "away_goals", "total_goals"]
+    if "neutral" in df.columns:
+        df["is_neutral"] = df["neutral"].astype(bool)
+        cols = base_cols + ["is_neutral"]
+    else:
+        cols = base_cols
     return _normalise(
         df[cols]
         .dropna(subset=["home_team", "away_team"])

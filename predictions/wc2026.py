@@ -175,8 +175,34 @@ def load_trained_model(use_history: bool = True, decay: float = 0.3) -> DixonCol
     model = DixonColesModel().fit(df, decay=decay, elo_prior=elo_prior, elo_lambda=0.5)
 
     # Attach ELO for downstream use (ratings display, etc.)
-    model.elo = elo if elo else None
+    model.elo  = elo if elo else None
+    model._df  = df   # keep training data for Benter form features
     return model
+
+
+# ── Benter multi-feature model ────────────────────────────────────────────────
+
+def load_benter_model(dc_model: DixonColesModel) -> "BenterModel":
+    """
+    Train a Benter multinomial logistic regression on the same dataset
+    used to fit dc_model.
+
+    dc_model must have been returned by load_trained_model() so that
+    dc_model.elo and dc_model._df are available.
+    """
+    from model.benter import BenterModel
+
+    df       = getattr(dc_model, "_df",  None)
+    elo      = getattr(dc_model, "elo",  None)
+
+    if df is None or df.empty:
+        raise RuntimeError(
+            "dc_model has no _df attribute. "
+            "Load it with load_trained_model() before calling load_benter_model()."
+        )
+
+    benter = BenterModel().fit(df, dc_model, elo_model=elo, form_window=5, C=0.5)
+    return benter
 
 
 # ── Single-match prediction ───────────────────────────────────────────────────

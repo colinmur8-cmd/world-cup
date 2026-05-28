@@ -72,6 +72,17 @@ def get_model(use_hist: bool, dec: float):
 
 
 @st.cache_resource(show_spinner=False)
+def get_benter_model(use_hist: bool, dec: float):
+    """Load and fit Benter model on the same dataset as the DC model."""
+    dc = get_model(use_hist, dec)
+    try:
+        from predictions.wc2026 import load_benter_model
+        return load_benter_model(dc)
+    except Exception:
+        return None
+
+
+@st.cache_resource(show_spinner=False)
 def get_stat_models(dec: float):
     import os, pandas as pd
     sb_cache   = os.path.join("data", "_statsbomb_stats_cache.csv")
@@ -246,6 +257,17 @@ with tab_match:
             result = predict_match(home_team, away_team, model, bk_odds=bk_odds)
             mkt = result["markets"]
 
+            # Benter model
+            benter    = get_benter_model(use_history, decay)
+            _df_train = getattr(model, "_df", None)
+            _elo      = getattr(model, "elo",  None)
+            if benter is not None and _df_train is not None:
+                benter_probs = benter.predict_proba(
+                    home_team, away_team, model, _elo, _df_train
+                )
+            else:
+                benter_probs = None
+
         # Expected goals
         lam = mkt["expected_goals"]["home"]
         mu  = mkt["expected_goals"]["away"]
@@ -257,12 +279,59 @@ with tab_match:
 
         st.divider()
 
-        # 1X2
+        # ── 1X2: Dixon-Coles baseline ─────────────────────────────────────────
         mr = mkt["match_result"]
-        c1, c2, c3 = st.columns(3)
-        c1.metric(f"{home_team} win", f"{mr['home']*100:.1f}%", f"Odds {1/mr['home']:.2f}")
-        c2.metric("Draw",             f"{mr['draw']*100:.1f}%", f"Odds {1/mr['draw']:.2f}")
-        c3.metric(f"{away_team} win", f"{mr['away']*100:.1f}%", f"Odds {1/mr['away']:.2f}")
+
+        st.markdown("#### Dixon-Coles (Poisson goals model)")
+        dc1, dc2, dc3 = st.columns(3)
+        dc1.metric(f"{home_team} win", f"{mr['home']*100:.1f}%", f"Fair odds {1/mr['home']:.2f}")
+        dc2.metric("Draw",             f"{mr['draw']*100:.1f}%", f"Fair odds {1/mr['draw']:.2f}")
+        dc3.metric(f"{away_team} win", f"{mr['away']*100:.1f}%", f"Fair odds {1/mr['away']:.2f}")
+
+        # ── Benter multi-factor model ─────────────────────────────────────────
+        if benter_probs is not None:
+            st.markdown("#### Benter Multi-Factor Model  *(ELO + DC + recent form)*")
+            st.caption(
+                f"Multinomial logistic regression trained on {benter.n_samples_:,} matches. "
+                "Combines DC base probabilities, ELO rating gap, attack/defence strength, "
+                "and recent form xG — each signal weighted by learned β coefficients."
+            )
+            b1, b2, b3 = st.columns(3)
+            b1.metric(f"{home_team} win", f"{benter_probs['home']*100:.1f}%",
+                      f"{(benter_probs['home'] - mr['home'])*100:+.1f}pp vs DC")
+            b2.metric("Draw",             f"{benter_probs['draw']*100:.1f}%",
+                      f"{(benter_probs['draw'] - mr['draw'])*100:+.1f}pp vs DC")
+            b3.metric(f"{away_team} win", f"{benter_probs['away']*100:.1f}%",
+                      f"{(benter_probs['away'] - mr['away'])*100:+.1f}pp vs DC")
+
+            # Ensemble blend
+            st.markdown("#### Ensemble (DC + Benter blend)")
+            blend_w = st.slider(
+                "Benter weight in ensemble",
+                min_value=0.0, max_value=1.0, value=0.6, step=0.1,
+                key="blend_w",
+                help="0 = pure DC  |  1 = pure Benter  |  0.6 = recommended",
+            )
+            ens = benter.blend(benter_probs, mr, weight=blend_w)
+            e1, e2, e3 = st.columns(3)
+            e1.metric(f"{home_team} win", f"{ens['home']*100:.1f}%", f"Fair odds {1/ens['home']:.2f}")
+            e2.metric("Draw",             f"{ens['draw']*100:.1f}%", f"Fair odds {1/ens['draw']:.2f}")
+            e3.metric(f"{away_team} win", f"{ens['away']*100:.1f}%", f"Fair odds {1/ens['away']:.2f}")
+
+            # Feature importance expander
+            with st.expander("Feature coefficients (what the model learned)", expanded=False):
+                fi = benter.feature_importance()
+                fi_pivot = fi.pivot(index="feature", columns="outcome", values="β").reset_index()
+                fi_pivot.columns.name = None
+                fi_pivot = fi_pivot.rename(columns={"feature": "Feature"})
+                st.dataframe(fi_pivot, hide_index=True, use_container_width=True)
+                st.caption(
+                    "Positive home_win coefficient = feature increases P(home win). "
+                    "dc_log_odds_home near 1.0 = Benter trusts DC signal. "
+                    "Strong elo_diff coefficient = ELO adds independent information."
+                )
+        else:
+            st.caption("Benter model loading... refresh if it doesn't appear.")
 
         st.divider()
 
@@ -287,12 +356,13 @@ with tab_match:
                        for s, p in mkt["correct_score"][:8]]
             st.dataframe(pd.DataFrame(cs_rows), hide_index=True, use_container_width=True)
 
-        # Value bets + Kelly staking
+        # Value bets + Kelly staking (uses ensemble probs when Benter available)
+        _1x2_probs = ens if (benter_probs is not None and "ens" in dir()) else mr
         if result["value_bets"]:
             st.divider()
             bankroll = st.number_input("Bankroll (£)", min_value=10, value=1000, step=50,
                                        key="bankroll_match")
-            st.markdown("**🟢 Value Bets Detected**")
+            st.markdown("**Value Bets Detected**")
             vb_rows = [{"Market": v.market, "Selection": v.selection,
                         "Model": f"{v.model_prob*100:.1f}%",
                         "Implied": f"{v.implied_prob*100:.1f}%",
