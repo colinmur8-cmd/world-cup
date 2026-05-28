@@ -28,6 +28,12 @@ with st.sidebar:
         help="Get a free key at the-odds-api.com — enables live value bet detection",
     )
 
+    api_football_key = st.text_input(
+        "API-Football key (optional)",
+        type="password",
+        help="api-sports.io — unlocks WC qualifier & Nations League data for corner/card/shots models",
+    )
+
     n_sims = st.select_slider(
         "Simulations",
         options=[5_000, 10_000, 25_000, 50_000],
@@ -67,14 +73,28 @@ def get_model(use_hist: bool, dec: float):
 
 @st.cache_resource(show_spinner=False)
 def get_stat_models(dec: float):
-    # Only called after the cache CSV exists — never downloads automatically.
-    import os
-    cache = os.path.join("data", "_statsbomb_stats_cache.csv")
-    if not os.path.exists(cache):
+    import os, pandas as pd
+    sb_cache   = os.path.join("data", "_statsbomb_stats_cache.csv")
+    apif_cache = os.path.join("data", "_api_football_stats_cache.csv")
+    if not os.path.exists(sb_cache):
         return {}
-    from predictions.wc2026 import load_stat_models
     try:
-        return load_stat_models(decay=dec, verbose=False)
+        from model.stat_model import fit_corners_model, fit_yellow_cards_model, fit_shots_model
+        df = pd.read_csv(sb_cache, parse_dates=["date"])
+        if os.path.exists(apif_cache):
+            df2 = pd.read_csv(apif_cache, parse_dates=["date"])
+            df = pd.concat([df, df2], ignore_index=True).drop_duplicates(
+                subset=["date", "home_team", "away_team"]
+            )
+        models = {}
+        for name, fn in [("corners", fit_corners_model),
+                         ("yellow_cards", fit_yellow_cards_model),
+                         ("shots_on_target", fit_shots_model)]:
+            try:
+                models[name] = fn(df, decay=dec)
+            except Exception:
+                pass
+        return models
     except Exception:
         return {}
 
@@ -291,24 +311,59 @@ with tab_match:
     st.subheader("Corners / Cards / Shots Markets")
 
     import os as _os
-    _sb_cache = _os.path.join("data", "_statsbomb_stats_cache.csv")
-    _cache_ready = _os.path.exists(_sb_cache)
+    _sb_cache   = _os.path.join("data", "_statsbomb_stats_cache.csv")
+    _apif_cache = _os.path.join("data", "_api_football_stats_cache.csv")
+    _sb_ready   = _os.path.exists(_sb_cache)
+    _apif_ready = _os.path.exists(_apif_cache)
 
-    if not _cache_ready:
-        st.info("StatsBomb data not downloaded yet. Press the button below once (~3–5 min) to unlock these markets.")
-        if st.button("📥 Build Stat Models (one-time download)", key="btn_build_stats"):
-            with st.spinner("Downloading StatsBomb event data for WC 2018/2022, Copa America, AFCON… (~3–5 min)"):
+    # ── Data source status ──
+    src_col1, src_col2 = st.columns(2)
+    src_col1.metric("StatsBomb (free)",
+                    "✓ loaded" if _sb_ready else "not downloaded",
+                    "~200 WC/Copa/AFCON matches")
+    src_col2.metric("API-Football",
+                    "✓ loaded" if _apif_ready else ("key ready" if api_football_key else "no key"),
+                    "WC qualifiers + Nations League")
+
+    if not _sb_ready:
+        st.info("Download StatsBomb data first to unlock these markets (free, one-time, ~3–5 min).")
+        if st.button("📥 Download StatsBomb Data", key="btn_build_stats"):
+            with st.spinner("Fetching WC 2018/2022, Copa America, AFCON event data… (~3–5 min)"):
                 try:
                     from data.statsbomb_loader import load_statsbomb_match_stats
                     load_statsbomb_match_stats(refresh=True, verbose=False)
+                    st.success("Done!")
                 except Exception as e:
-                    st.error(f"Download failed: {e}")
+                    st.error(f"Failed: {e}")
             st.cache_resource.clear()
             st.rerun()
-    else:
+
+    if _sb_ready and api_football_key and not _apif_ready:
+        if st.button("📥 Fetch API-Football Qualifier Data", key="btn_apif"):
+            with st.spinner("Fetching WC qualifier + Nations League stats… (uses ~80 of your 100 daily requests)"):
+                try:
+                    from data.api_football import APIFootballClient, normalise_api_football
+                    client = APIFootballClient(api_key=api_football_key)
+                    df = client.fetch_all_international_stats(
+                        seasons=list(range(2020, 2026)),
+                        competitions=["FIFA World Cup", "WC Qualifiers UEFA",
+                                      "WC Qualifiers CONMEBOL", "UEFA Nations League",
+                                      "UEFA Euro", "Copa America"],
+                        cache_path=_apif_cache,
+                        verbose=False,
+                    )
+                    df = normalise_api_football(df)
+                    df.to_csv(_apif_cache, index=False)
+                    st.success(f"Fetched {len(df)} matches from API-Football!")
+                except Exception as e:
+                    st.error(f"API-Football fetch failed: {e}")
+            st.cache_resource.clear()
+            st.rerun()
+
+    if _sb_ready:
         stat_models = get_stat_models(decay)
         if not stat_models:
-            st.warning("Cache file found but models failed to load. Try refreshing the page.")
+            st.warning("Cache found but models failed to load — try refreshing the page.")
         else:
             from model.markets import stat_markets
             smkt = stat_markets(stat_models, home_team, away_team)
@@ -344,7 +399,8 @@ with tab_match:
                         for l, v in sh["over_under"].items()
                     ]), hide_index=True, use_container_width=True)
 
-            st.caption("Trained on StatsBomb free data (~200 intl matches). API-Football ($19/mo) adds qualifier data for better accuracy.")
+            n_src = 2 if _apif_ready else 1
+            st.caption(f"Models trained on {n_src} data source(s). {'Add API-Football key in sidebar for qualifier data.' if not _apif_ready else 'Full dataset active.'}")
 
 
 # ═══════════════════════════════════════════════════════════
