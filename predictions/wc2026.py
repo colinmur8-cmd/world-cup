@@ -150,7 +150,33 @@ def load_trained_model(use_history: bool = True, decay: float = 0.3) -> DixonCol
         )
     else:
         df = load_matches(("2018", "2022"))
-    return DixonColesModel().fit(df, decay=decay)
+
+    # ── Merge StatsBomb xG where available ───────────────────────────────────
+    import os
+    _sb_cache = os.path.join(os.path.dirname(__file__), "..", "data", "_statsbomb_stats_cache.csv")
+    if os.path.exists(_sb_cache):
+        try:
+            sb_df = pd.read_csv(_sb_cache, parse_dates=["date"])
+            sb_df = sb_df[["date", "home_team", "away_team", "home_xg", "away_xg"]].copy()
+            df = df.merge(sb_df, on=["date", "home_team", "away_team"], how="left")
+        except Exception:
+            pass
+
+    # ── Build DominanceELO and use as prior ───────────────────────────────────
+    elo_prior = None
+    try:
+        from model.elo import DominanceELO
+        elo = DominanceELO()
+        elo.fit(df, decay=decay)
+        elo_prior = elo.prior_attack()
+    except Exception:
+        elo = None
+
+    model = DixonColesModel().fit(df, decay=decay, elo_prior=elo_prior, elo_lambda=0.5)
+
+    # Attach ELO for downstream use (ratings display, etc.)
+    model.elo = elo if elo else None
+    return model
 
 
 # ── Single-match prediction ───────────────────────────────────────────────────

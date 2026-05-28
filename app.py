@@ -101,12 +101,13 @@ def get_stat_models(dec: float):
 
 # ── Main tabs ─────────────────────────────────────────────────────────────────
 
-tab_winner, tab_groups, tab_match, tab_backtest, tab_matchbt = st.tabs([
+tab_winner, tab_groups, tab_match, tab_backtest, tab_matchbt, tab_elo = st.tabs([
     "🏆 Tournament Winner",
     "📊 Group Stage",
     "🆚 Match Predictor",
     "📈 Winner Backtest",
     "🔬 Match Backtest",
+    "📡 Team ELO Ratings",
 ])
 
 # ═══════════════════════════════════════════════════════════
@@ -573,3 +574,72 @@ with tab_matchbt:
 
     else:
         st.info("Press **Run Match Backtest** to see prediction accuracy, calibration, and simulated P&L.")
+
+
+# ═══════════════════════════════════════════════════════════
+# TAB 6 — Team ELO Ratings
+# ═══════════════════════════════════════════════════════════
+with tab_elo:
+    st.subheader("Team Dominance ELO Ratings")
+    st.write(
+        "Ratings built from all international results. Unlike Dixon-Coles attack ratings, "
+        "ELO rewards beating **strong opponents** by large margins — a 5-0 over Argentina "
+        "earns far more than a 5-0 over Haiti."
+    )
+    st.caption("Blend: 50% goal difference + 50% xG difference (where available). K-factor scales by match importance.")
+
+    if st.button("▶  Compute ELO Ratings", type="primary", key="btn_elo"):
+        with st.spinner("Loading model and computing ELO…"):
+            model = get_model(use_history, decay)
+
+        if hasattr(model, "elo") and model.elo is not None:
+            elo = model.elo
+            from predictions.wc2026 import WC2026_GROUPS
+            wc_teams = sorted({t for grp in WC2026_GROUPS.values() for t in grp})
+
+            col_e1, col_e2 = st.columns([2, 1])
+
+            with col_e1:
+                st.markdown("#### All WC 2026 Teams — ELO Ranking")
+                tbl = elo.table(teams=wc_teams)
+                tbl["ELO"] = tbl["ELO"].astype(int)
+
+                def _elo_color(row):
+                    e = int(row["ELO"])
+                    if e >= 1700:   return ["background-color:#c8f7c5"] * len(row)
+                    if e >= 1600:   return ["background-color:#eafaea"] * len(row)
+                    if e <= 1350:   return ["background-color:#fde8e8"] * len(row)
+                    return [""] * len(row)
+
+                st.dataframe(
+                    tbl.style.apply(_elo_color, axis=1),
+                    hide_index=True, use_container_width=True, height=600,
+                )
+
+            with col_e2:
+                st.markdown("#### Top 15")
+                top15 = tbl.head(15).set_index("Team")["ELO"]
+                st.bar_chart(top15, horizontal=True)
+
+            st.divider()
+            st.markdown("#### ELO vs Dixon-Coles Attack Rating")
+            st.caption("Teams above the diagonal are underrated by raw goals; below are overrated. Divergence = luck or schedule bias.")
+
+            dc_ratings = model.team_ratings()
+            dc_map = dict(zip(dc_ratings["team"], dc_ratings["attack"]))
+            compare_rows = []
+            for _, row in tbl.iterrows():
+                t = row["Team"]
+                compare_rows.append({
+                    "Team": t,
+                    "ELO": row["ELO"],
+                    "DC Attack": round(dc_map.get(t, 0.0), 3),
+                    "ELO Rank": int(row["Rank"]),
+                })
+            df_cmp = pd.DataFrame(compare_rows).sort_values("ELO", ascending=False)
+            st.dataframe(df_cmp, hide_index=True, use_container_width=True, height=400)
+
+        else:
+            st.warning("ELO not available — model may have been loaded before this feature was built. Restart the app to recompute.")
+    else:
+        st.info("Press **Compute ELO Ratings** to see team strength rankings based on dominance over quality opponents.")
