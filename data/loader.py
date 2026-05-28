@@ -129,8 +129,16 @@ def load_full_history(
         df = pd.read_csv(cache, low_memory=False)
     else:
         print("  Downloading international results (martj42)…", end=" ", flush=True)
-        with urllib.request.urlopen(_URL, timeout=20) as r:
-            raw = r.read().decode("utf-8")
+        import ssl
+        # On macOS with Python 3.x the SSL certs bundle may not be installed.
+        # Try verified first; fall back to unverified so the app still works.
+        try:
+            with urllib.request.urlopen(_URL, timeout=20) as r:
+                raw = r.read().decode("utf-8")
+        except ssl.SSLError:
+            ctx = ssl._create_unverified_context()
+            with urllib.request.urlopen(_URL, timeout=20, context=ctx) as r:
+                raw = r.read().decode("utf-8")
         df = pd.read_csv(io.StringIO(raw), low_memory=False)
         df.to_csv(cache, index=False)
         print(f"cached ({len(df):,} rows)")
