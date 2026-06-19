@@ -8,6 +8,21 @@ stake limit.
 > Smarkets API access must be approved separately. Run in **paper mode**
 > (`PAPER_MODE=true`, the default) until you are ready to place real orders.
 
+## Smarkets authentication
+
+The Smarkets REST API is **session-based** — there is no static API-key
+header. Once your account is approved for API access (API Request Form +
+one-time activation fee), you authenticate with your **account login**:
+
+1. `POST https://api.smarkets.com/v3/sessions/` with
+   `{"username": "...", "password": "..."}`
+2. The response returns a `token`
+3. Requests send `Authorization: Session-Token <token>`
+
+Set `SMARKETS_USERNAME` and `SMARKETS_PASSWORD` in `.env`; the bot mints the
+session token at startup and re-authenticates automatically on expiry. (You
+may instead paste a pre-minted token into `SMARKETS_API_TOKEN`.)
+
 ## Layout
 
 ```

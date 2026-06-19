@@ -64,9 +64,12 @@ class Config:
     pongbot_channel_id: int = field(
         default_factory=lambda: int(_get_str("PONGBOT_CHANNEL_ID", required=True))
     )
-    smarkets_api_token: str = field(
-        default_factory=lambda: _get_str("SMARKETS_API_TOKEN", required=True)
-    )
+    # Smarkets auth. The REST API is session-based: log in with your
+    # account credentials to mint a Session-Token. A pre-minted token may
+    # be supplied directly instead (it will be used until it expires).
+    smarkets_username: str = field(default_factory=lambda: _get_str("SMARKETS_USERNAME"))
+    smarkets_password: str = field(default_factory=lambda: _get_str("SMARKETS_PASSWORD"))
+    smarkets_api_token: str = field(default_factory=lambda: _get_str("SMARKETS_API_TOKEN"))
     bot_owner_user_id: int = field(
         default_factory=lambda: int(_get_str("BOT_OWNER_USER_ID", required=True))
     )
@@ -93,6 +96,13 @@ class Config:
             raise ConfigError("MAX_PRICE must be >= MIN_PRICE")
         if self.unit_size <= 0:
             raise ConfigError("UNIT_SIZE must be positive")
+        # Need either login credentials or a pre-minted session token.
+        if not self.smarkets_api_token and not (
+            self.smarkets_username and self.smarkets_password
+        ):
+            raise ConfigError(
+                "Set SMARKETS_USERNAME + SMARKETS_PASSWORD (or SMARKETS_API_TOKEN)"
+            )
 
 
 # Singleton used across the package.

@@ -1,6 +1,8 @@
 """Async Smarkets REST API client (v3).
 
-Authentication uses an API token passed as ``Authorization: Token {token}``.
+Authentication is session-based: log in via ``POST /sessions/`` with account
+credentials to obtain a token, then send ``Authorization: Session-Token {token}``
+on every request (re-authenticating automatically when the session expires).
 
 Notes on units / conversions
 -----------------------------
@@ -87,10 +89,24 @@ class SmarketsError(RuntimeError):
 
 
 class SmarketsClient:
-    def __init__(self, api_token: str, *, paper_mode: bool = True):
-        self.api_token = api_token
+    def __init__(
+        self,
+        *,
+        username: str = "",
+        password: str = "",
+        session_token: str = "",
+        paper_mode: bool = True,
+    ):
+        # The Smarkets REST API is session-based: log in with account
+        # credentials to mint a Session-Token, sent as
+        # ``Authorization: Session-Token <token>``. A pre-minted token may
+        # be supplied directly (used until it expires, then we re-auth).
+        self.username = username
+        self.password = password
+        self._token = session_token or ""
         self.paper_mode = paper_mode
         self._session: aiohttp.ClientSession | None = None
+        self._auth_lock = asyncio.Lock()
         # Monotonic counter for synthetic paper order ids.
         self._paper_seq = 0
 
@@ -104,31 +120,68 @@ class SmarketsClient:
     async def connect(self) -> None:
         if self._session is None or self._session.closed:
             self._session = aiohttp.ClientSession(
-                headers={
-                    "Authorization": f"Token {self.api_token}",
-                    "Content-Type": "application/json",
-                },
+                headers={"Content-Type": "application/json"},
                 timeout=aiohttp.ClientTimeout(total=20),
             )
+        # Mint a session token up front if we only have credentials.
+        if not self._token and self.username:
+            await self._login()
 
     async def close(self) -> None:
         if self._session and not self._session.closed:
             await self._session.close()
 
-    # --- Low-level request with retry / 429 backoff --------------------
+    # --- Session auth ---------------------------------------------------
+    async def _login(self) -> None:
+        """Create a Smarkets session and store the returned token.
+
+        ``POST /sessions/`` with ``{"username", "password"}`` -> ``{"token"}``.
+        Guarded by a lock so concurrent 401s only re-auth once.
+        """
+        async with self._auth_lock:
+            if not self.username or not self.password:
+                raise SmarketsError("No Smarkets credentials to create a session")
+            assert self._session is not None
+            url = f"{BASE_URL}/sessions/"
+            async with self._session.post(
+                url, json={"username": self.username, "password": self.password}
+            ) as resp:
+                text = await resp.text()
+                if resp.status >= 400:
+                    raise SmarketsError(f"Session login failed (HTTP {resp.status}): {text}")
+                data = await resp.json()
+            token = data.get("token")
+            if not token:
+                raise SmarketsError("Session login returned no token")
+            self._token = token
+            logger.info("Smarkets session established")
+
+    def _auth_headers(self) -> dict:
+        return {"Authorization": f"Session-Token {self._token}"} if self._token else {}
+
+    # --- Low-level request with retry / 429 backoff / 401 re-auth ------
     async def _request(self, method: str, path: str, *, retries: int = 4, **kwargs):
         await self.connect()
         assert self._session is not None
         url = f"{BASE_URL}{path}"
         attempt = 0
+        reauthed = False
         while True:
             attempt += 1
+            headers = {**kwargs.pop("headers", {}), **self._auth_headers()}
             try:
-                async with self._session.request(method, url, **kwargs) as resp:
+                async with self._session.request(method, url, headers=headers, **kwargs) as resp:
                     if resp.status == 429:
                         logger.warning("Smarkets 429 rate limit on %s; backing off %.0fs",
                                        path, RATE_LIMIT_BACKOFF)
                         await asyncio.sleep(RATE_LIMIT_BACKOFF)
+                        continue
+                    if resp.status in (401, 403) and not reauthed and self.username:
+                        # Session likely expired; re-authenticate once and retry.
+                        logger.info("Smarkets %d on %s; re-authenticating", resp.status, path)
+                        self._token = ""
+                        await self._login()
+                        reauthed = True
                         continue
                     if resp.status >= 500:
                         raise SmarketsError(f"Server error {resp.status} on {path}")

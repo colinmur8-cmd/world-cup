@@ -35,7 +35,12 @@ class PongBot(discord.Client):
         super().__init__(intents=intents, **kwargs)
 
         self.notifier: Notifier | None = None
-        self.smarkets = SmarketsClient(config.smarkets_api_token, paper_mode=config.paper_mode)
+        self.smarkets = SmarketsClient(
+            username=config.smarkets_username,
+            password=config.smarkets_password,
+            session_token=config.smarkets_api_token,
+            paper_mode=config.paper_mode,
+        )
         # Active match keys for duplicate detection.
         self._active: set[str] = set()
         self._report_task: asyncio.Task | None = None
