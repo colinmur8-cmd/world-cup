@@ -1,0 +1,20 @@
+# plays.txt — fill this in each morning from ccstatistics.com/dashboard
+#
+# Format: LEAGUE | TIME | Player1 vs Player2 | DIRECTION | UNITS
+#
+# LEAGUE options:  TT ELITE  /  TT CUP  /  CZECH LIGA PRO
+# TIME:            match start time exactly as shown on dashboard (e.g. 5:05 PM)
+# DIRECTION:       OVER or UNDER
+# UNITS:           number before the U on the signal badge (e.g. 1U, 2U, 1.5U)
+#
+# Lines starting with # are ignored. Blank lines are ignored.
+# TT CUP plays are automatically skipped (no Smarkets market).
+#
+# Example:
+# TT ELITE | 5:05 PM | Kolek M. vs Kolodziej K. | UNDER | 1U
+# TT ELITE | 5:40 PM | Smolka K. vs Gajda R. | OVER | 1U
+# TT CUP   | 4:00 PM | Guzy K. vs Gola B. | UNDER | 2U
+# TT ELITE | 6:55 PM | Warzecha M. vs Barton A. | UNDER | 1.0U
+#
+# --- Add today's plays below this line ---
+
